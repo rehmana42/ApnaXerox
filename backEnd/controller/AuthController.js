@@ -484,7 +484,8 @@ export const updateStatus=async(req,res)=>{
       await trans.sendMail(mailoption)
       return res.json({success:true, msg:'email send successfully '})
       
-     }  res.json({success:true,order})
+     } 
+      // res.json({success:true,order})
   }
   
   catch(e){

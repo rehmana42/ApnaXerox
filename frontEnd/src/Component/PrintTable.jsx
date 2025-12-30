@@ -94,7 +94,7 @@ const  update=async(pdfNumber,value)=>{
     // setUpdateValue(value)
     // console.log(updateValue)
     
-    // setLoading(true)
+    setLoading(true)
     const response = await axios.post(`${backendUrl}/api/updateStatus`,{pdfNumber,value},{headers:{token}})
     console.log(response.data)
     if(response.data.success){
@@ -104,13 +104,13 @@ const  update=async(pdfNumber,value)=>{
       toast.error(response.data.error)
     }
 
-    // setLoading(false)
+    setLoading(false)
   }
   catch(e){
     console.log(e.message )
   }
   finally{
-    // setLoading(false)
+    setLoading(false)
   }
 }
 
