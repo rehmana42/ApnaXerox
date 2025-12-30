@@ -65,6 +65,9 @@ const SearchBar = ({shop, setShop, setLoading}) => {
         setShop(response.data.shop)
         setLoading(false)
       }
+      else{
+        toast.error(response.data.error)
+      }
       
     }
     catch(e){
