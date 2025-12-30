@@ -58,7 +58,11 @@ const SearchBar = ({shop, setShop, setLoading}) => {
 
   const getShop=async()=>{
     try{
+      console.log(location.lat, location.lon)
       setLoading(true)
+      if(!location.lat,!location.lon){
+       return toast.error(' your location is show please try to search by typing name ')
+      }
       const response=await axios.get(`${backendUrl}/api/nearbyshop?lat=${location.lat}&lon=${location.lon}`,)
       if(response.data.success){
         console.log(response.data)
