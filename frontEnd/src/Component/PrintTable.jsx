@@ -18,6 +18,8 @@ import {
     SelectValue,
   } from "@/components/ui/select"
 
+import emailjs from "@emailjs/browser";
+
 import { Input } from "@/components/ui/input"
 import { Download, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -98,7 +100,25 @@ const  update=async(pdfNumber,value)=>{
     const response = await axios.post(`${backendUrl}/api/updateStatus`,{pdfNumber,value},{headers:{token}})
     console.log(response.data)
     if(response.data.success){
-      toast.message(response.data.msg)
+        console.log(import.meta.env.VITE_SERVICE_ID)
+        console.log(import.meta.env.VITE_TEMPLATE_ID)
+        console.log(import.meta.env.VITE_EMAILJS_PUBLICkEY )
+        console.log(response.data.order.email)
+       const result = await emailjs.send(
+        //import.meta.env.VITE_BACKEND_URL
+        import.meta.env.VITE_SERVICE_ID,     // 🔁 Service ID
+        import.meta.env.VITE_TEMPLATE_ID,    // 🔁 Template ID
+        {
+          pdfNumber:response.data.order.pdfNumber ,
+          status:response.data.order.tracking ,
+          location: "Byculla, Mumbai",
+          to_email:response.data.order.email // 👈 template me use hoga
+        },
+        import.meta.env.VITE_EMAILJS_PUBLICkEY  // 🔁 Public Key
+      );
+
+      // console.log("Email Sent:", result.text);
+       toast.success('Email send success')
     }
     else{
       toast.error(response.data.error)
