@@ -31,15 +31,25 @@ const SearchBar = ({shop, setShop, setLoading}) => {
   const{backendUrl}=useContext(XeroxContext)
 
   const getCurrentLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        setLocation({
-          lat: pos.coords.latitude.toFixed(6),
-          lon: pos.coords.longitude.toFixed(6),
-        }),
-      () => alert("Location permission denied")
-    )
-  }
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject("Geolocation not supported");
+      }
+  
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = {
+            lat: pos.coords.latitude.toFixed(6),
+            lon: pos.coords.longitude.toFixed(6),
+          };
+          setLocation(coords); // UI ke liye
+          resolve(coords);     // logic ke liye
+        },
+        () => reject("Location permission denied")
+      );
+    });
+  };
+  
   useEffect(()=>{
      getCurrentLocation()
   },[])
@@ -55,15 +65,17 @@ const SearchBar = ({shop, setShop, setLoading}) => {
     return () => clearTimeout(delay);
   },[searchQuery])
 
+  
 
   const getShop=async()=>{
     try{
-      console.log(location.lat, location.lon)
+      await getCurrentLocation()
+      const {lat,lon}=await getCurrentLocation()
       setLoading(true)
       if(!location.lat,!location.lon){
        return toast.error(' your location is show please try to search by typing name ')
       }
-      const response=await axios.get(`${backendUrl}/api/nearbyshop?lat=${location.lat}&lon=${location.lon}`,)
+      const response=await axios.get(`${backendUrl}/api/nearbyshop?lat=${lat}&lon=${lon}`,)
       if(response.data.success){
         console.log(response.data)
         setShop(response.data.shop)
