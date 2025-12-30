@@ -1,5 +1,6 @@
 
 import jwt from 'jsonwebtoken'
+import emailjs from "@emailjs/nodejs";
 import bcrypt from 'bcrypt'
 import shopModel from '../models/shopModel.js'
 import orderModel from '../models/orderModel.js'
@@ -19,6 +20,8 @@ export const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+
 
 
 
@@ -416,39 +419,56 @@ const sendEmailAsync = async (order, shop) => {
 
 // -------------------------- update  status  --------------------------
 
-export const updateStatus = async (req, res) => {
-  try {
-    const { pdfNumber, value } = req.body;
-
-    if (!value) {
-      return res.json({ success: false, msg: "Status required" });
+export const updateStatus=async(req,res)=>{
+  try{
+    console.log("baba merija bc ")
+    const {pdfNumber,value}=req.body
+    console.log(value)
+    if(!value){
+      return res.json({success:false,msg:"updated value bej mc "})
     }
-
-    const order = await orderModel.findOne({ pdfNumber });
-    if (!order) {
-      return res.json({ success: false, msg: "Order not found" });
+    // console.log(pdfNumber)
+    // console.log(updateValue)
+    const order=await orderModel.findOne({pdfNumber})
+    const shop=await shopModel.findOne({_id:req.userId.id})
+    console.log(shop.location.coordinates[0])
+    if(order.tracking === 'complete'){
+      return res.json({success:false,error:" order is completed you can't update their status "})
     }
-
-    if (order.tracking === "complete") {
-      return res.json({
-        success: false,
-        error: "Order already completed",
-      });
-    }
-
-    order.tracking = value;
-    await order.save();
-
-    const shop = await shopModel.findById(req.userId.id);
-
-    // 🚀 Respond immediately
-    res.json({ success: true, msg: "Status updated" });
-
-    // 🔥 Background task (NO await)
-    sendEmailAsync(order, shop);
-
-  } catch (e) {
-    console.log(e.message);
-    res.status(500).json({ success: false, error: e.message });
+    order.tracking=value
+    await order.save()
+    console.log(order)
+    
+    if(order){
+      console.log("hii baby ")
+      let lat=shop.location.coordinates[0]
+      let lon=shop.location.coordinates[1]
+      const response = await axios.get(
+        "https://nominatim.openstreetmap.org/reverse",
+        {
+          params: {
+            lat,
+          lon,
+            format: "json"
+          },
+          headers: {
+            "User-Agent": "XeroxApp/1.0 (contact@xeroxapp.com)"
+          }
+        }
+      );
+    
+      let location=response.data.display_name
+     
+      console.log(process.env.EMAIL)
+      
+      return res.json({success:true, order,location})
+      
+     } 
+      // res.json({success:true,order})
   }
-};
+  
+  catch(e){
+    console.log(e)
+    res.json({ success:false, error:e.message});
+  }
+}
