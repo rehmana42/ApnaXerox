@@ -369,127 +369,86 @@ export const downloadPdf = async (req, res) => {
 };
 
 
+const sendEmailAsync = async (order, shop) => {
+  try {
+    let location = "Near your selected shop";
 
-// -------------------------- update  status  --------------------------
-
-export const updateStatus=async(req,res)=>{
-  try{
-    console.log("baba merija bc ")
-    const {pdfNumber,value}=req.body
-    console.log(value)
-    if(!value){
-      return res.json({success:false,msg:"updated value bej mc "})
-    }
-    // console.log(pdfNumber)
-    // console.log(updateValue)
-    const order=await orderModel.findOne({pdfNumber})
-    const shop=await shopModel.findOne({_id:req.userId.id})
-    console.log(shop.location.coordinates[0])
-    if(order.tracking === 'complete'){
-      return res.json({success:false,error:" order is completed you can't update their status "})
-    }
-    order.tracking=value
-    await order.save()
-    console.log(order)
-    
-    if(order){
-      console.log("hii baby ")
-      let lat=shop.location.coordinates[0]
-      let lon=shop.location.coordinates[1]
+    // 🌍 Reverse geocode (background)
+    try {
       const response = await axios.get(
         "https://nominatim.openstreetmap.org/reverse",
         {
           params: {
-            lat,
-          lon,
-            format: "json"
+            lat: shop.location.coordinates[0],
+            lon: shop.location.coordinates[1],
+            format: "json",
           },
           headers: {
-            "User-Agent": "XeroxApp/1.0 (contact@xeroxapp.com)"
-          }
+            "User-Agent": "XeroxApp/1.0 (contact@xeroxapp.com)",
+          },
+          timeout: 5000, // 🔥 IMPORTANT
         }
       );
-    
-      let location=response.data.display_name
-     
-      console.log(process.env.EMAIL)
+      location = response.data.display_name || location;
+    } catch (geoErr) {
+      console.log("Geocode failed:", geoErr.message);
+    }
 
-      //---------------- sending mail --------------
-      const mailoption = {
-        from: process.env.EMAIL,
-        to: order.email,
-        subject: "📄 Your PDF Print Order Details",
-        html: `
-        <div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;">
-          <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; overflow:hidden;">
-      
-            <!-- Banner Image -->
-            <div style="text-align:center; background:#0f172a;">
-              <img 
-                src="${shop.shopImage}"
-                alt="Print Service"
-                style="width:100%; max-height:200px; object-fit:cover;"
-              />
-            </div>
-      
-            <!-- Header -->
-            <div style="padding:16px; text-align:center;">
-              <h2 style="margin:0; color:#0f172a;">Print Order Confirmation</h2>
-            </div>
-      
-            <!-- Body -->
-            <div style="padding:20px; color:#334155;">
-              <p>Hello 👋,</p>
-              <p>Your PDF print order has been received successfully.</p>
-      
-              <table style="width:100%; border-collapse:collapse; margin-top:16px;">
-                <tr>
-                  <td style="padding:10px; font-weight:bold;">📄 PDF Number</td>
-                  <td style="padding:10px;">${pdfNumber}</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px; font-weight:bold;">📄 PDF STATUS</td>
-                  <td style="padding:10px;">${order.tracking}</td>
-                </tr>
-                <tr style="background:#f8fafc;">
-                  <td style="padding:10px; font-weight:bold;">🏪 Shop Name</td>
-                  <td style="padding:10px;">${shop.shopName}</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px; font-weight:bold;">📍 Location</td>
-                  <td style="padding:10px;">${location}</td>
-                </tr>
-              </table>
-      
-              <div style="margin-top:20px; padding:12px; background:#e0f2fe; border-radius:6px;">
-                <p style="margin:0; font-size:14px;">
-                  Please show your <strong>PDF Number</strong> at the shop to collect your prints.
-                </p>
-              </div>
-      
-              <p style="margin-top:20px;">
-                Thank you for choosing our service 🙏
-              </p>
-            </div>
-      
-            <!-- Footer -->
-            <div style="background:#f1f5f9; padding:12px; text-align:center; font-size:12px; color:#64748b;">
-              © ${new Date().getFullYear()} Xerox Printing Service
-            </div>
-      
-          </div>
-        </div>
-        `
-      };
-      await trans.sendMail(mailoption)
-      return res.json({success:true, msg:'email send successfully '})
-      
-     } 
-      // res.json({success:true,order})
+    // 📧 Send email
+    await trans.sendMail({
+      from: process.env.EMAIL,
+      to: order.email,
+      subject: "📄 Your PDF Print Order",
+      html: `
+        <p><strong>PDF Number:</strong> ${order.pdfNumber}</p>
+        <p><strong>Status:</strong> ${order.tracking}</p>
+        <p><strong>Shop:</strong> ${shop.shopName}</p>
+        <p><strong>Location:</strong> ${location}</p>
+      `,
+    });
+
+  } catch (err) {
+    console.log("Email background error:", err.message);
   }
-  
-  catch(e){
-    console.log(e.message)
-    res.json({ success:true, error:e.message});
+};
+
+
+
+// -------------------------- update  status  --------------------------
+
+export const updateStatus = async (req, res) => {
+  try {
+    const { pdfNumber, value } = req.body;
+
+    if (!value) {
+      return res.json({ success: false, msg: "Status required" });
+    }
+
+    const order = await orderModel.findOne({ pdfNumber });
+    if (!order) {
+      return res.json({ success: false, msg: "Order not found" });
+    }
+
+    if (order.tracking === "complete") {
+      return res.json({
+        success: false,
+        error: "Order already completed",
+      });
+    }
+
+    order.tracking = value;
+    await order.save();
+
+    const shop = await shopModel.findById(req.userId.id);
+
+    // 🚀 Respond immediately
+    res.json({ success: true, msg: "Status updated" });
+
+    // 🔥 Background task (NO await)
+    sendEmailAsync(order, shop);
+
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ success: false, error: e.message });
   }
-}
+};
