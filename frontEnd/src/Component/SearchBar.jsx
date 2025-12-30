@@ -69,7 +69,8 @@ const SearchBar = ({shop, setShop, setLoading}) => {
 
   const getShop=async()=>{
     try{
-      await getCurrentLocation()
+      
+setLoading(true)
       const {lat,lon}=await getCurrentLocation()
       setLoading(true)
       if(!location.lat,!location.lon){
