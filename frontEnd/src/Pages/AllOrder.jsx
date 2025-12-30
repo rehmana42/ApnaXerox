@@ -25,7 +25,7 @@ const AllOrder = () => {
     </div>
         
       
-     : shop.length<=0 ?
+      !shop || shop?.length<=0 ?
       <div className="  mt-10 flex flex-col items-center justify-center gap-6 px-4 py-10 text-center">
 
 {/* Video */}
